@@ -4,10 +4,9 @@ import numpy as np
 import pandas as pd
 import math
 import os
-import urllib.request
 
 st.set_page_config(page_title="AI 影像處理與人臉分析工具", layout="wide")
-st.title("📸 互動式影像處理與人臉分析工具")
+st.title("互動式影像處理與人臉分析工具")
 
 def calculate_psnr(img1, img2):
     mse = np.mean((img1.astype(np.float64) - img2.astype(np.float64)) ** 2)
@@ -98,34 +97,33 @@ if uploaded_file is not None:
             min_neighbors = st.slider("最小相鄰矩形 (Min Neighbors)", 1, 15, 5)
         
         cascade_filename = 'haarcascade_frontalface_default.xml'
-        if not os.path.isfile(cascade_filename):
-            url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml"
-            urllib.request.urlretrieve(url, cascade_filename)
-            
         face_cascade = cv2.CascadeClassifier(cascade_filename)
         
-        gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
-        
-        faces, rejectLevels, levelWeights = face_cascade.detectMultiScale3(
-            gray, 
-            scaleFactor=scale_factor, 
-            minNeighbors=min_neighbors, 
-            outputRejectLevels=True
-        )
-        
-        img_faces = img_rgb.copy()
-        face_count = len(faces) if len(faces) > 0 else 0
-        
-        if face_count > 0:
-            for (x, y, w, h), weight in zip(faces, levelWeights):
-                confidence = min(weight[0] / 5.0, 1.0) 
-                
-                cv2.rectangle(img_faces, (x, y), (x + w, y + h), (0, 255, 0), 3)
-                cv2.putText(img_faces, f"Conf: {confidence:.2f}", (x, y - 10), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        
-        st.success(f"偵測到 **{face_count}** 張人臉")
-        st.image(img_faces, use_container_width=True)
+        if face_cascade.empty():
+            st.error("找不到或無法載入人臉偵測模型檔 (haarcascade_frontalface_default.xml)，請確認該 XML 檔案已成功上傳至 GitHub 專案根目錄。")
+        else:
+            gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+            
+            faces, rejectLevels, levelWeights = face_cascade.detectMultiScale3(
+                gray, 
+                scaleFactor=scale_factor, 
+                minNeighbors=min_neighbors, 
+                outputRejectLevels=True
+            )
+            
+            img_faces = img_rgb.copy()
+            face_count = len(faces) if len(faces) > 0 else 0
+            
+            if face_count > 0:
+                for (x, y, w, h), weight in zip(faces, levelWeights):
+                    confidence = min(weight[0] / 5.0, 1.0) 
+                    
+                    cv2.rectangle(img_faces, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                    cv2.putText(img_faces, f"Conf: {confidence:.2f}", (x, y - 10), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            
+            st.success(f"偵測到 **{face_count}** 張人臉")
+            st.image(img_faces, use_container_width=True)
 
 else:
     st.info("請從左側上傳影像以開始分析。")
