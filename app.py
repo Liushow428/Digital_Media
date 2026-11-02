@@ -93,26 +93,44 @@ if uploaded_file is not None:
                 c1.image(img_rgb, caption="原圖", use_column_width=True)
                 c2.image(img_filtered, caption="濾波後", use_column_width=True)
 
-    #MediaPipe
+    # OpenCV Haar-Cascade 
     with tab3:
-        min_conf = st.slider("最低信心度閾值", 0.1, 1.0, 0.5, 0.05)
+        st.write("目前使用演算法：OpenCV Haar-Cascade")
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            scale_factor = st.slider("縮放因子 (Scale Factor)", 1.01, 1.5, 1.1, 0.01)
+        with col_p2:
+            min_neighbors = st.slider("最小相鄰矩形 (Min Neighbors)", 1, 15, 5)
         
-        with mp.solutions.face_detection.FaceDetection(model_selection=1, min_detection_confidence=min_conf) as face_detection:
-            results = face_detection.process(img_rgb)
-            img_faces = img_rgb.copy()
-            face_count = len(results.detections) if results.detections else 0
-            
-            if results.detections:
-                for detection in results.detections:
-                    bboxC = detection.location_data.relative_bounding_box
-                    ih, iw, _ = img_faces.shape
-                    x, y, w, h = int(bboxC.xmin * iw), int(bboxC.ymin * ih), int(bboxC.width * iw), int(bboxC.height * ih)
-                    
-                    cv2.rectangle(img_faces, (x, y), (x + w, y + h), (0, 255, 0), 3)
-                    cv2.putText(img_faces, f"Face: {detection.score[0]:.2f}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            
-            st.success(f"共偵測到 **{face_count}** 張人臉")
-            st.image(img_faces, use_column_width=True)
-
+        # 載入 OpenCV 內建的 Haar 特徵分類器
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        face_cascade = cv2.CascadeClassifier(cascade_path)
+        
+        # Haar Cascade 需使用灰階影像偵測
+        gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+        
+        # 使用 detectMultiScale3 取得邊界框與權重 (levelWeights 可作為信心度)
+        faces, rejectLevels, levelWeights = face_cascade.detectMultiScale3(
+            gray, 
+            scaleFactor=scale_factor, 
+            minNeighbors=min_neighbors, 
+            outputRejectLevels=True
+        )
+        
+        img_faces = img_rgb.copy()
+        face_count = len(faces) if len(faces) > 0 else 0
+        
+        if face_count > 0:
+            for (x, y, w, h), weight in zip(faces, levelWeights):
+                # 將 OpenCV 回傳的權重簡單轉換為 0~1 的信心度 (Confidence Score) 以符合規格
+                confidence = min(weight[0] / 5.0, 1.0) 
+                
+                # 繪製邊界框與信心度標籤
+                cv2.rectangle(img_faces, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                cv2.putText(img_faces, f"Conf: {confidence:.2f}", (x, y - 10), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        
+        st.success(f"✅ 共偵測到 **{face_count}** 張人臉")
+        st.image(img_faces, use_column_width=True)
 else:
     st.info("請從左側上傳影像以開始分析。")
