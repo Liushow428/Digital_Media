@@ -53,7 +53,7 @@ if uploaded_file is not None:
             display_img = img_yuv[:, :, idx]
             hist_img = img_yuv[:, :, idx]
 
-        col_img.image(display_img, caption=f"預覽: {color_mode}", use_container_width=True)
+        col_img.image(display_img, caption=f"預覽: {color_mode}", width='stretch')
         with col_hist:
             st.markdown(f"**{color_mode} 強度分布直方圖**")
             plot_histogram(hist_img, color_mode)
@@ -85,8 +85,8 @@ if uploaded_file is not None:
                 
                 st.metric(label="PSNR (峰值信噪比)", value=f"{psnr_value:.2f} dB" if psnr_value != float('inf') else "∞ (完全相同)")
                 c1, c2 = st.columns(2)
-                c1.image(img_rgb, caption="原圖", use_container_width=True)
-                c2.image(img_filtered, caption="濾波後", use_container_width=True)
+                c1.image(img_rgb, caption="原圖", width='stretch')
+                c2.image(img_filtered, caption="濾波後", width='stretch')
 
     with tab3:
         st.write("目前使用演算法：OpenCV Haar-Cascade")
@@ -100,9 +100,10 @@ if uploaded_file is not None:
         face_cascade = cv2.CascadeClassifier(cascade_path)
         
         if face_cascade.empty():
-            st.error("無法載入 OpenCV 內建模型，請在 Streamlit Cloud 右下角點擊 Manage app -> Reboot app 重啟環境。")
+            st.error("無法載入 OpenCV 內建模型，請確認 requirements.txt 已更新。")
         else:
             gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+            
             faces, rejectLevels, levelWeights = face_cascade.detectMultiScale3(
                 gray, 
                 scaleFactor=scale_factor, 
@@ -122,6 +123,7 @@ if uploaded_file is not None:
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             
             st.success(f"偵測到 **{face_count}** 張人臉")
-            st.image(img_faces, use_container_width=True)
+            st.image(img_faces, width='stretch')
+
 else:
     st.info("請從左側上傳影像以開始分析。")
