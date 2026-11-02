@@ -96,11 +96,16 @@ if uploaded_file is not None:
         with col_p2:
             min_neighbors = st.slider("最小相鄰矩形 (Min Neighbors)", 1, 15, 5)
         
-        cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
-        face_cascade = cv2.CascadeClassifier(cascade_path)
+        cascade_filename = "haarcascade_frontalface_default.xml"
+        if not os.path.exists(cascade_filename):
+            import urllib.request
+            url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml"
+            urllib.request.urlretrieve(url, cascade_filename)
+            
+        face_cascade = cv2.CascadeClassifier(cascade_filename)
         
         if face_cascade.empty():
-            st.error("無法載入 OpenCV 內建模型，請確認 requirements.txt 已更新。")
+            st.error("模型載入失敗，請確認網路連線或稍後重試。")
         else:
             gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
             
@@ -124,6 +129,5 @@ if uploaded_file is not None:
             
             st.success(f"偵測到 **{face_count}** 張人臉")
             st.image(img_faces, width='stretch')
-
 else:
     st.info("請從左側上傳影像以開始分析。")
