@@ -89,44 +89,39 @@ if uploaded_file is not None:
                 c2.image(img_filtered, caption="濾波後", use_container_width=True)
 
     with tab3:
-            st.write("目前使用演算法：OpenCV Haar-Cascade")
-            col_p1, col_p2 = st.columns(2)
-            with col_p1:
-                scale_factor = st.slider("縮放因子 (Scale Factor)", 1.01, 1.5, 1.1, 0.01)
-            with col_p2:
-                min_neighbors = st.slider("最小相鄰矩形 (Min Neighbors)", 1, 15, 5)
+        st.write("目前使用演算法：OpenCV Haar-Cascade")
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            scale_factor = st.slider("縮放因子 (Scale Factor)", 1.01, 1.5, 1.1, 0.01)
+        with col_p2:
+            min_neighbors = st.slider("最小相鄰矩形 (Min Neighbors)", 1, 15, 5)
+        
+        cascade_path = os.path.join(cv2.data.haarcascades, 'haarcascade_frontalface_default.xml')
+        face_cascade = cv2.CascadeClassifier(cascade_path)
+        
+        if face_cascade.empty():
+            st.error("無法載入 OpenCV 內建模型，請在 Streamlit Cloud 右下角點擊 Manage app -> Reboot app 重啟環境。")
+        else:
+            gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+            faces, rejectLevels, levelWeights = face_cascade.detectMultiScale3(
+                gray, 
+                scaleFactor=scale_factor, 
+                minNeighbors=min_neighbors, 
+                outputRejectLevels=True
+            )
             
-            # 取得目前 app.py 所在的絕對路徑，並與 XML 檔名合併
-            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            cascade_filename = os.path.join(BASE_DIR, 'haarcascade_frontalface_default.xml')
+            img_faces = img_rgb.copy()
+            face_count = len(faces) if len(faces) > 0 else 0
             
-            face_cascade = cv2.CascadeClassifier(cascade_filename)
+            if face_count > 0:
+                for (x, y, w, h), weight in zip(faces, levelWeights):
+                    confidence = min(weight[0] / 5.0, 1.0) 
+                    
+                    cv2.rectangle(img_faces, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                    cv2.putText(img_faces, f"Conf: {confidence:.2f}", (x, y - 10), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             
-            if face_cascade.empty():
-                st.error(f"找不到模型檔！請確認 {cascade_filename} 已推播至 GitHub 專案中。")
-            else:
-                gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
-                
-                faces, rejectLevels, levelWeights = face_cascade.detectMultiScale3(
-                    gray, 
-                    scaleFactor=scale_factor, 
-                    minNeighbors=min_neighbors, 
-                    outputRejectLevels=True
-                )
-                
-                img_faces = img_rgb.copy()
-                face_count = len(faces) if len(faces) > 0 else 0
-                
-                if face_count > 0:
-                    for (x, y, w, h), weight in zip(faces, levelWeights):
-                        confidence = min(weight[0] / 5.0, 1.0) 
-                        
-                        cv2.rectangle(img_faces, (x, y), (x + w, y + h), (0, 255, 0), 3)
-                        cv2.putText(img_faces, f"Conf: {confidence:.2f}", (x, y - 10), 
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                
-                st.success(f"偵測到 **{face_count}** 張人臉")
-                st.image(img_faces, use_container_width=True)
-
+            st.success(f"偵測到 **{face_count}** 張人臉")
+            st.image(img_faces, use_container_width=True)
 else:
     st.info("請從左側上傳影像以開始分析。")
