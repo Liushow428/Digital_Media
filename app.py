@@ -121,7 +121,9 @@ if uploaded_file is not None:
             
             if face_count > 0:
                 for (x, y, w, h), weight in zip(faces, levelWeights):
-                    confidence = min(weight[0] / 5.0, 1.0) 
+                    # 修正：相容不同 OpenCV 版本的權重格式
+                    w_val = np.ravel(weight)[0]
+                    confidence = min(float(w_val) / 5.0, 1.0) 
                     
                     cv2.rectangle(img_faces, (x, y), (x + w, y + h), (0, 255, 0), 3)
                     cv2.putText(img_faces, f"Conf: {confidence:.2f}", (x, y - 10), 
